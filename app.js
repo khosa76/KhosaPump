@@ -105,6 +105,8 @@
     const dryRunArmText = document.getElementById("dryRunArmText");
 
     // Telemetry Elements
+    const voltageCard = document.getElementById("voltageCard");
+    const currentCard = document.getElementById("currentCard");
     const voltageVal = document.getElementById("voltageVal");
     const voltageFill = document.getElementById("voltageFill");
     const mainsBadge = document.getElementById("mainsBadge");
@@ -155,6 +157,10 @@
         }
         // Fallback: dismiss splash after 2.2 seconds if no telemetry arrives earlier
         setTimeout(dismissSplash, 2200);
+
+        // Initial UI states
+        updateStartButtonState();
+        updateCardsVisibility();
 
         // Auto-connect to broker
         if (!config.host) {
@@ -456,6 +462,27 @@
         }
     }
 
+    function updateCardsVisibility() {
+        // Electricity is present when voltage is at or above 120V
+        const hasElectricity = (latestVoltage !== null && latestVoltage >= 120.0);
+        const isMotorRunning = (latestMotorState === "ON");
+
+        // 1. If electricity is not present (<120V or null):
+        //    Don't show ELECTRICITY MAINS card and don't show MOTOR LOAD CURRENT card
+        // 2. If electricity is present but motor is OFF:
+        //    Show ELECTRICITY MAINS card, but don't show MOTOR LOAD CURRENT card
+        // 3. If electricity is present AND motor is ON:
+        //    Show BOTH in UI
+
+        if (voltageCard) {
+            voltageCard.style.display = hasElectricity ? "" : "none";
+        }
+
+        if (currentCard) {
+            currentCard.style.display = (hasElectricity && isMotorRunning) ? "" : "none";
+        }
+    }
+
     // Process incoming MQTT payloads
     function handleIncomingMessage(topic, payloadStr) {
         try {
@@ -504,6 +531,9 @@
 
         if (handshakeBar) {
             if (data.status === "SUCCESS") {
+                if (data.cmd === "ON") latestMotorState = "ON";
+                else if (data.cmd === "OFF") latestMotorState = "OFF";
+                updateCardsVisibility();
                 handshakeBar.className = "handshake-bar success";
                 handshakeIcon.textContent = "✓";
                 handshakeMsg.textContent = `[ACK in ${timeStr}]: ${data.msg || "Command Executed"}`;
@@ -602,6 +632,9 @@
 
         // Update Start button text & appearance based on calculated voltage
         updateStartButtonState();
+
+        // Update card visibility based on electricity and motor state
+        updateCardsVisibility();
 
         // Auto-Resume Toggle state
         if (data.autoResume !== undefined) {
