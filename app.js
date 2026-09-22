@@ -210,13 +210,13 @@
 
         // Motor Control Buttons
         btnMotorStart.addEventListener("click", () => {
-            if (confirm("Turn ON irrigation pump?")) {
+            if (confirm("Turn ON?")) {
                 publishCommand("ON");
             }
         });
 
         btnMotorStop.addEventListener("click", () => {
-            if (confirm("Execute 3-step dual-relay STOP sequence?")) {
+            if (confirm("Turn OFF?")) {
                 publishCommand("OFF");
             }
         });
