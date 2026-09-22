@@ -19,6 +19,7 @@
     let inFlightCmd = null;
     let inFlightStartTime = 0;
     let inFlightTimer = null;
+    let handshakeClearTimer = null;
     let targetDeviceId = null;
     let latestVoltage = null;
     let latestMotorState = "OFF";
@@ -366,25 +367,33 @@
 
         // Update handshake banner to waiting state
         if (handshakeBar && !isBackgroundQuery) {
+            if (handshakeClearTimer) clearTimeout(handshakeClearTimer);
+            handshakeBar.style.display = "flex";
             handshakeBar.className = "handshake-bar pending";
             handshakeIcon.textContent = "⏳";
-            handshakeMsg.textContent = `Command [${action}] sent. Waiting for ESP32 hardware confirmation...`;
+            handshakeMsg.textContent = isPunjabi
+                ? `ਕਮਾਂਡ [${action}] ਭੇਜੀ ਗਈ। ESP32 ਦੀ ਪੁਸ਼ਟੀ ਦੀ ਉਡੀਕ ਹੈ...`
+                : `Command [${action}] sent. Waiting for ESP32 hardware confirmation...`;
         }
 
-        // Arm 10-second timeout for ESP32 response (adapted for cellular 4G latency)
+        // Arm 18-second timeout for ESP32 response (adapted for cellular 4G latency + 3s safety check)
         if (inFlightTimer) clearTimeout(inFlightTimer);
         inFlightTimer = setTimeout(() => {
             if (inFlightCmd) {
-                setButtonsLoading(inFlightCmd, false);
+                const timedOutCmd = inFlightCmd;
+                setButtonsLoading(timedOutCmd, false);
                 if (!isBackgroundQuery && handshakeBar) {
+                    handshakeBar.style.display = "flex";
                     handshakeBar.className = "handshake-bar rejected";
                     handshakeIcon.textContent = "⚠️";
-                    handshakeMsg.textContent = `No ACK from ESP32 for [${inFlightCmd}] within 10s. Device may be off or 4G data weak.`;
-                    appendLog("alert", `⚠️ Handshake Timeout: ESP32 did not respond to [${inFlightCmd}] within 10s.`);
+                    handshakeMsg.textContent = isPunjabi
+                        ? `18 ਸਕਿੰਟਾਂ ਵਿੱਚ [${timedOutCmd}] ਦੀ ਕੋਈ ਪੁਸ਼ਟੀ ਨਹੀਂ ਮਿਲੀ। 4G ਸਿਗਨਲ ਚੈੱਕ ਕਰੋ।`
+                        : `No ACK from ESP32 for [${timedOutCmd}] within 18s. Device may be off or 4G data weak.`;
+                    appendLog("alert", `⚠️ Handshake Timeout: ESP32 did not respond to [${timedOutCmd}] within 18s.`);
                 }
                 // Retain inFlightCmd so if a late response arrives, it can still be credited!
             }
-        }, isBackgroundQuery ? 3000 : 10000);
+        }, isBackgroundQuery ? 3000 : 18000);
 
         const cmdTopic = targetDeviceId ? `${config.topicPrefix}/${targetDeviceId}/command` : `${config.topicPrefix}/command`;
         const payload = JSON.stringify(Object.assign({
@@ -522,33 +531,47 @@
             inFlightTimer = null;
         }
 
+        const cmd = (data.command || data.cmd || inFlightCmd || "").toUpperCase();
+        const status = (data.status || "").toUpperCase();
+        const msg = data.message || data.msg || "";
+
         const latency = inFlightStartTime ? (Date.now() - inFlightStartTime) : 0;
-        const isLate = latency > 10000;
-        setButtonsLoading(inFlightCmd || data.cmd, false);
+        const isLate = latency > 18000;
+        setButtonsLoading(cmd, false);
         inFlightCmd = null;
 
         const timeStr = isLate ? `${(latency / 1000).toFixed(1)}s (Delayed)` : `${latency}ms`;
 
         if (handshakeBar) {
-            if (data.status === "SUCCESS") {
-                if (data.cmd === "ON") latestMotorState = "ON";
-                else if (data.cmd === "OFF") latestMotorState = "OFF";
+            if (handshakeClearTimer) clearTimeout(handshakeClearTimer);
+            handshakeBar.style.display = "flex";
+
+            if (status === "SUCCESS") {
+                if (cmd === "ON") latestMotorState = "ON";
+                else if (cmd === "OFF") latestMotorState = "OFF";
                 updateCardsVisibility();
                 handshakeBar.className = "handshake-bar success";
                 handshakeIcon.textContent = "✓";
-                handshakeMsg.textContent = `[ACK in ${timeStr}]: ${data.msg || "Command Executed"}`;
-                appendLog("cmd", `✅ [ESP32 ACK in ${timeStr}]: ${data.msg}`);
-            } else if (data.status === "REJECTED") {
+                handshakeMsg.textContent = `[ACK in ${timeStr}]: ${msg || "Command Executed"}`;
+                appendLog("cmd", `✅ [ESP32 ACK in ${timeStr}]: ${msg}`);
+
+                // Auto-clear success message after 5 seconds so UI remains clean
+                handshakeClearTimer = setTimeout(() => {
+                    if (handshakeBar && handshakeBar.classList.contains("success")) {
+                        handshakeBar.style.display = "none";
+                    }
+                }, 5000);
+            } else if (status === "REJECTED") {
                 handshakeBar.className = "handshake-bar rejected";
                 handshakeIcon.textContent = "❌";
-                handshakeMsg.textContent = `[REJECTED]: ${data.msg || "Command rejected by controller"}`;
-                appendLog("alert", `❌ [ESP32 Rejected]: ${data.msg}`);
-                showAlertBanner("COMMAND REJECTED", data.msg);
+                handshakeMsg.textContent = `[REJECTED]: ${msg || "Command rejected by controller"}`;
+                appendLog("alert", `❌ [ESP32 Rejected]: ${msg}`);
+                showAlertBanner("COMMAND REJECTED", msg);
             } else {
                 handshakeBar.className = "handshake-bar rejected";
                 handshakeIcon.textContent = "⚠️";
-                handshakeMsg.textContent = `[FAILED]: ${data.msg || "Execution error"}`;
-                appendLog("alert", `⚠️ [ESP32 Error]: ${data.msg}`);
+                handshakeMsg.textContent = `[FAILED]: ${msg || "Execution error"}`;
+                appendLog("alert", `⚠️ [ESP32 Error]: ${msg}`);
             }
         }
     }
@@ -559,7 +582,7 @@
         if (lastUpdatedText) {
             lastUpdatedText.classList.remove("brand-logo-badge");
             const now = new Date();
-            lastUpdatedText.textContent = data.time ? `Tower: ${data.time}` : `Updated: ${now.toLocaleTimeString()}`;
+            lastUpdatedText.textContent = data.time ? `${data.time}` : `Updated: ${now.toLocaleTimeString()}`;
         }
 
         // Voltage
@@ -627,6 +650,36 @@
             } else {
                 motorStatusTitle.textContent = t.motorOff;
                 motorStatusSubtitle.textContent = t.standbySubtitle;
+            }
+
+            // Ground truth: If live telemetry confirms motor state while waiting or after timeout warning:
+            const isWaitingForThis = (inFlightCmd === data.motor);
+            const isWarningForThis = (handshakeBar && handshakeBar.classList.contains("rejected") && handshakeMsg && handshakeMsg.textContent.includes(data.motor));
+
+            if (isWaitingForThis || isWarningForThis) {
+                if (inFlightTimer) {
+                    clearTimeout(inFlightTimer);
+                    inFlightTimer = null;
+                }
+                setButtonsLoading(data.motor, false);
+                inFlightCmd = null;
+
+                if (handshakeBar) {
+                    if (handshakeClearTimer) clearTimeout(handshakeClearTimer);
+                    handshakeBar.style.display = "flex";
+                    handshakeBar.className = "handshake-bar success";
+                    handshakeIcon.textContent = "✓";
+                    handshakeMsg.textContent = isPunjabi
+                        ? (data.motor === "ON" ? "ਮੋਟਰ ਸਫਲਤਾਪੂਰਵਕ ਚੱਲ ਰਹੀ ਹੈ (ਲਾਈਵ ਪੁਸ਼ਟੀ)" : "ਮੋਟਰ ਬੰਦ ਹੋ ਗਈ ਹੈ (ਲਾਈਵ ਪੁਸ਼ਟੀ)")
+                        : (data.motor === "ON" ? "Motor is running (Live confirmed)" : "Motor is stopped (Live confirmed)");
+                    appendLog("cmd", `✅ [Live Telemetry Confirm]: Motor is ${data.motor}`);
+
+                    handshakeClearTimer = setTimeout(() => {
+                        if (handshakeBar && handshakeBar.classList.contains("success")) {
+                            handshakeBar.style.display = "none";
+                        }
+                    }, 5000);
+                }
             }
         }
 
