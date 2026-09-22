@@ -1202,4 +1202,161 @@ body {
     }
 }
 
+/* SKELETON / LOADING ANIMATION FOR CARDS (UNTIL STATUS OR TELEMETRY ARRIVES) */
+@keyframes skeletonShimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+@keyframes cardGlowPulse {
+    0%, 100% {
+        border-color: rgba(255, 255, 255, 0.08);
+    }
+    50% {
+        border-color: rgba(59, 130, 246, 0.28);
+    }
+}
+
+@keyframes orbSearching {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 25px rgba(59, 130, 246, 0.5);
+    }
+}
+
+@keyframes cardShimmerSweep {
+    0% {
+        left: -150%;
+    }
+    100% {
+        left: 150%;
+    }
+}
+
+/* Card shimmer sweep while data is pending */
+body.data-pending .card {
+    position: relative;
+    overflow: hidden;
+    animation: cardGlowPulse 2.4s infinite ease-in-out;
+}
+
+body.data-pending .card::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -150%;
+    width: 150%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%);
+    animation: cardShimmerSweep 2.2s infinite cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+}
+
+/* Hide static pre-text in cards and replace with glowing skeleton bars */
+body.data-pending .state-title,
+body.data-pending .state-subtitle,
+body.data-pending .metric-val,
+body.data-pending .badge:not(.brand-logo-badge),
+body.data-pending .toggle-pill,
+body.data-pending .health-item strong,
+body.data-pending #networkModeText,
+body.data-pending #apnText,
+body.data-pending #mainsHealthText,
+body.data-pending #loadStateText {
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 25%, rgba(59, 130, 246, 0.18) 50%, rgba(255, 255, 255, 0.04) 75%) !important;
+    background-size: 200% 100% !important;
+    animation: skeletonShimmer 1.6s infinite ease-in-out !important;
+    border-radius: 6px !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    user-select: none !important;
+    pointer-events: none !important;
+}
+
+body.data-pending .state-title {
+    display: inline-block;
+    min-width: 150px;
+    min-height: 28px;
+}
+
+body.data-pending .state-subtitle {
+    display: inline-block;
+    min-width: 180px;
+    min-height: 16px;
+    margin-top: 6px;
+}
+
+body.data-pending .metric-val {
+    display: inline-block;
+    min-width: 85px;
+    min-height: 38px;
+}
+
+body.data-pending .metric-unit {
+    opacity: 0.2;
+}
+
+body.data-pending .badge:not(.brand-logo-badge) {
+    min-width: 62px;
+    min-height: 20px;
+}
+
+body.data-pending .toggle-pill {
+    min-width: 55px;
+    min-height: 24px;
+}
+
+body.data-pending .health-item strong {
+    min-width: 85px;
+    min-height: 16px;
+    display: inline-block;
+}
+
+body.data-pending #networkModeText,
+body.data-pending #apnText,
+body.data-pending #mainsHealthText,
+body.data-pending #loadStateText {
+    display: inline-block;
+    min-width: 75px;
+    min-height: 14px;
+}
+
+body.data-pending .meter-bar-fill {
+    width: 45% !important;
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.5) 50%, rgba(59, 130, 246, 0.15) 100%) !important;
+    background-size: 200% 100% !important;
+    animation: skeletonShimmer 1.6s infinite ease-in-out !important;
+}
+
+body.data-pending .state-orb {
+    animation: orbSearching 2s infinite ease-in-out;
+    border-color: rgba(59, 130, 246, 0.4);
+}
+
+body.data-pending .signal-bars .bar {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    animation: barScan 1.6s infinite ease-in-out;
+}
+
+body.data-pending .signal-bars .bar:nth-child(1) { animation-delay: 0.1s; }
+body.data-pending .signal-bars .bar:nth-child(2) { animation-delay: 0.2s; }
+body.data-pending .signal-bars .bar:nth-child(3) { animation-delay: 0.3s; }
+body.data-pending .signal-bars .bar:nth-child(4) { animation-delay: 0.4s; }
+
+@keyframes barScan {
+    0%, 100% { background-color: rgba(255, 255, 255, 0.08); }
+    50% { background-color: rgba(59, 130, 246, 0.5); }
+}
+
+
 

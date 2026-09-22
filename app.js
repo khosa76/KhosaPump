@@ -471,17 +471,22 @@
         }
     }
 
-    function updateCardsVisibility() {
-        // Electricity is present when voltage is at or above 120V
-        const hasElectricity = (latestVoltage !== null && latestVoltage >= 120.0);
-        const isMotorRunning = (latestMotorState === "ON");
+    function clearDataPending() {
+        if (document.body.classList.contains("data-pending")) {
+            document.body.classList.remove("data-pending");
+        }
+    }
 
-        // 1. If electricity is not present (<120V or null):
-        //    Don't show ELECTRICITY MAINS card and don't show MOTOR LOAD CURRENT card
-        // 2. If electricity is present but motor is OFF:
-        //    Show ELECTRICITY MAINS card, but don't show MOTOR LOAD CURRENT card
-        // 3. If electricity is present AND motor is ON:
-        //    Show BOTH in UI
+    function updateCardsVisibility() {
+        // While waiting for initial telemetry, keep voltageCard visible with skeleton loader
+        if (latestVoltage === null) {
+            if (voltageCard) voltageCard.style.display = "";
+            if (currentCard) currentCard.style.display = "none";
+            return;
+        }
+
+        const hasElectricity = (latestVoltage >= 120.0);
+        const isMotorRunning = (latestMotorState === "ON");
 
         if (voltageCard) {
             voltageCard.style.display = hasElectricity ? "" : "none";
@@ -503,11 +508,14 @@
             }
 
             if (topic.endsWith("/ack")) {
+                clearDataPending();
                 handleAckMessage(data);
             } else if (topic.endsWith("/telemetry")) {
+                clearDataPending();
                 updateTelemetryUI(data);
                 appendLog("telemetry", `📥 Telemetry: V=${data.voltage}V, I=${data.current}A, Motor=${data.motor}`);
             } else if (topic.endsWith("/status")) {
+                clearDataPending();
                 if (data.status === "online") {
                     updateBrokerStatus("connected", "ESP32 Online");
                     appendLog("info", "🟢 ESP32 is ONLINE via 4G Cat-1.");
@@ -578,6 +586,7 @@
 
     function updateTelemetryUI(data) {
         dismissSplash();
+        clearDataPending();
 
         if (lastUpdatedText) {
             lastUpdatedText.classList.remove("brand-logo-badge");
