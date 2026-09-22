@@ -22,7 +22,7 @@
     let targetDeviceId = null;
     let latestVoltage = null;
     let latestMotorState = "OFF";
-    const isPunjabi = (document.documentElement.lang === "pa");
+    const isPunjabi = document.documentElement.lang === "pa" || !window.location.pathname.toLowerCase().includes("english.html");
 
     const t = {
         connecting: isPunjabi ? "ਕਨੈਕਟ ਹੋ ਰਿਹਾ ਹੈ..." : "Connecting...",
@@ -59,7 +59,7 @@
         pumpingNormally: isPunjabi ? "ਪਾਣੀ ਪੰਪ ਹੋ ਰਿਹਾ ਹੈ" : "Pumping normally",
         lowCurrentWarning: isPunjabi ? "ਘੱਟ ਕਰੰਟ ਚੇਤਾਵਨੀ!" : "Low current warning!",
         motorStopped: isPunjabi ? "ਮੋਟਰ ਬੰਦ ਹੈ" : "Motor Stopped",
-        noElectricity: isPunjabi ? "ਬਿਜਲੀ ਉਪਲਬਧ ਨਹੀਂ ਹੈ" : "ELECTRICITY NOT PRESENT",
+        noElectricity: isPunjabi ? "ਬਿਜਲੀ ਨਹੀਂ ਹੈ" : "ELECTRICITY NOT PRESENT",
         noElectricityAlert: isPunjabi ? "ਬਿਜਲੀ ਸਪਲਾਈ ਉਪਲਬਧ ਨਹੀਂ ਹੈ (ਵੋਲਟੇਜ 120V ਤੋਂ ਘੱਟ ਹੈ)। ਮੋਟਰ ਚਾਲੂ ਨਹੀਂ ਹੋ ਸਕਦੀ।" : "Electricity is not present (Voltage is below 120V). Motor cannot be started.",
         standbySubtitle: isPunjabi ? "ਸਟਾਰਟਰ ਸਟੈਂਡਬਾਏ 'ਤੇ ਹੈ" : "Starter standby",
         runningSubtitle: (v, i) => isPunjabi ? `${v}V (${i}A) 'ਤੇ ਚੱਲ ਰਹੀ ਹੈ` : `Running at ${v}V (${i}A)`,
