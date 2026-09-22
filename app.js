@@ -68,6 +68,20 @@
     };
 
     // DOM Elements
+    const appSplash = document.getElementById("appSplash");
+    let splashDismissed = false;
+
+    function dismissSplash() {
+        if (splashDismissed) return;
+        splashDismissed = true;
+        if (appSplash) {
+            appSplash.classList.add("fade-out");
+            setTimeout(() => {
+                appSplash.style.display = "none";
+            }, 500);
+        }
+    }
+
     const brokerStatusPill = document.getElementById("brokerStatusPill");
     const brokerStatusText = document.getElementById("brokerStatusText");
     const lastUpdatedText = document.getElementById("lastUpdatedText");
@@ -134,6 +148,13 @@
     function init() {
         bindEvents();
         populateSettingsForm();
+
+        // Allow user to click splash screen to dismiss immediately
+        if (appSplash) {
+            appSplash.addEventListener("click", dismissSplash);
+        }
+        // Fallback: dismiss splash after 2.2 seconds if no telemetry arrives earlier
+        setTimeout(dismissSplash, 2200);
 
         // Auto-connect to broker
         if (!config.host) {
@@ -503,8 +524,13 @@
     }
 
     function updateTelemetryUI(data) {
-        const now = new Date();
-        lastUpdatedText.textContent = data.time ? `Tower: ${data.time}` : `Updated: ${now.toLocaleTimeString()}`;
+        dismissSplash();
+
+        if (lastUpdatedText) {
+            lastUpdatedText.classList.remove("brand-logo-badge");
+            const now = new Date();
+            lastUpdatedText.textContent = data.time ? `Tower: ${data.time}` : `Updated: ${now.toLocaleTimeString()}`;
+        }
 
         // Voltage
         if (typeof data.voltage === "number") {

@@ -996,3 +996,210 @@ body {
     pointer-events: none;
 }
 
+/* APP INTRO SPLASH & LOGO SCREEN */
+.app-splash {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background: radial-gradient(circle at center, #0f1c30 0%, #060a12 100%);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    opacity: 1;
+    transform: scale(1);
+    transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.app-splash.fade-out {
+    opacity: 0;
+    transform: scale(1.05);
+    pointer-events: none;
+}
+
+.splash-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 32px;
+    max-width: 420px;
+    animation: splashAppear 0.5s ease-out;
+}
+
+@keyframes splashAppear {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.splash-logo-container {
+    position: relative;
+    width: 110px;
+    height: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+}
+
+.splash-glow-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid rgba(16, 185, 129, 0.35);
+    pointer-events: none;
+}
+
+.splash-glow-ring.ring-1 {
+    width: 96px;
+    height: 96px;
+    animation: splashRingPulse 2.4s cubic-bezier(0.2, 0.8, 0.4, 1) infinite;
+}
+
+.splash-glow-ring.ring-2 {
+    width: 96px;
+    height: 96px;
+    animation: splashRingPulse 2.4s cubic-bezier(0.2, 0.8, 0.4, 1) infinite 1.2s;
+}
+
+@keyframes splashRingPulse {
+    0% {
+        transform: scale(0.85);
+        opacity: 0.9;
+        border-color: rgba(16, 185, 129, 0.6);
+    }
+    100% {
+        transform: scale(1.6);
+        opacity: 0;
+        border-color: rgba(59, 130, 246, 0.1);
+    }
+}
+
+.splash-logo-badge {
+    position: relative;
+    z-index: 2;
+    width: 84px;
+    height: 84px;
+    border-radius: 24px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    box-shadow: 0 0 35px var(--color-green-glow), 0 10px 30px rgba(0, 0, 0, 0.6);
+    animation: splashBadgeFloat 3s ease-in-out infinite;
+}
+
+@keyframes splashBadgeFloat {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-4px);
+    }
+}
+
+.splash-logo-badge svg {
+    width: 44px;
+    height: 44px;
+}
+
+.splash-brand-title {
+    font-size: 2.1rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: linear-gradient(120deg, #ffffff 40%, #a7f3d0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 6px;
+}
+
+.splash-brand-subtitle {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-bottom: 28px;
+    letter-spacing: 0.2px;
+}
+
+.splash-loader-bar {
+    width: 140px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 12px;
+}
+
+.splash-loader-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 45%;
+    background: linear-gradient(90deg, #10b981, #3b82f6);
+    border-radius: var(--radius-full);
+    animation: splashLoading 1.5s infinite ease-in-out;
+}
+
+@keyframes splashLoading {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(330%);
+    }
+}
+
+.splash-status-text {
+    font-size: 0.78rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-muted);
+}
+
+/* BRAND LOGO BADGE IN HERO HEADER */
+.brand-logo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.32);
+    padding: 4px 12px;
+    border-radius: var(--radius-full);
+    color: #34d399;
+    font-weight: 600;
+    font-size: 0.76rem;
+    letter-spacing: 0.5px;
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.15);
+}
+
+.brand-logo-badge .badge-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 8px #10b981;
+    animation: badgeDotBlink 1.8s infinite ease-in-out;
+}
+
+@keyframes badgeDotBlink {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.35;
+        transform: scale(0.85);
+    }
+}
+
+
