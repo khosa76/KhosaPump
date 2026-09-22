@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pa">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ਖੇਤੀਬਾੜੀ ਪੰਪ - ਸਮਾਰਟ ਮੋਟਰ ਕੰਟਰੋਲਰ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gurmukhi:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- MQTT.js CDN for WebSocket connection -->
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+</head>
+
+<body>
+    <!-- Top Navigation -->
+    <header class="top-nav">
+        <div class="brand">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path
+                        d="M12 2v6m0 8v6M4.93 4.93l4.24 4.24m5.66 5.66l4.24 4.24M2 12h6m8 0h6M4.93 19.07l4.24-4.24m5.66-5.66l4.24-4.24" />
+                </svg>
+            </div>
+            <div class="brand-text">
+                <!-- <h1>ਐਗਰੀ-ਪੰਪ 4G</h1> -->
+                <!-- <span class="subtext">ਸਿਮ A7672S LTE Cat-1</span> -->
+            </div>
+        </div>
+
+        <div class="nav-actions">
+            <a href="english.html" class="lang-pill" title="Switch to English">English</a>
+            <div class="status-pill" id="brokerStatusPill">
+                <span class="status-dot"></span>
+                <span class="status-label" id="brokerStatusText">ਕਨੈਕਟ ਹੋ ਰਿਹਾ ਹੈ...</span>
+            </div>
+            <button class="icon-btn" id="btnOpenSettings" title="ਬ੍ਰੋਕਰ ਸੈਟਿੰਗਾਂ">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path
+                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                    </path>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="dashboard-container">
+
+        <!-- Critical Alerts Banner (Hidden by default) -->
+        <div class="alert-banner" id="alertBanner" style="display: none;">
+            <div class="alert-icon">⚠️</div>
+            <div class="alert-content">
+                <h4 id="alertTitle">ਡਰਾਈ-ਰਨ ਚੇਤਾਵਨੀ</h4>
+                <p id="alertDesc">ਪੰਪ ਨੂੰ ਨੁਕਸਾਨ ਤੋਂ ਬਚਾਉਣ ਲਈ ਮੋਟਰ ਬੰਦ ਕਰ ਦਿੱਤੀ ਗਈ ਹੈ।</p>
+            </div>
+            <button class="alert-dismiss-btn" id="btnDismissAlert">✕</button>
+        </div>
+
+        <!-- HERO: Main Motor Status & Remote Controls -->
+        <section class="card hero-card">
+            <div class="hero-header">
+                <!-- <span class="card-tag">ਕੰਟਰੋਲ ਕੇਂਦਰ</span> -->
+                <span class="last-seen" id="lastUpdatedText">ਲਾਈਵ ਡਾਟਾ ਉਡੀਕ ਰਿਹਾ ਹੈ...</span>
+            </div>
+
+            <div class="pump-state-display">
+                <div class="state-orb" id="stateOrb">
+                    <div class="orb-pulse"></div>
+                    <div class="orb-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+                            <line x1="12" y1="2" x2="12" y2="12"></line>
+                        </svg>
+                    </div>
+                </div>
+                <div class="state-details">
+                    <h2 class="state-title" id="motorStatusTitle">ਮੋਟਰ ਬੰਦ ਹੈ</h2>
+                    <p class="state-subtitle" id="motorStatusSubtitle">ਸਟਾਰਟਰ ਸਟੈਂਡਬਾਏ 'ਤੇ ਹੈ</p>
+                </div>
+            </div>
+
+            <!-- Action Controls Grid -->
+            <div class="control-actions">
+                <button class="btn btn-start" id="btnMotorStart">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 5v14l11-7z" />
+                    </svg>
+                    <span class="btn-text">ਪੰਪ ਚਾਲੂ ਕਰੋ</span>
+                </button>
+                <button class="btn btn-stop" id="btnMotorStop">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <rect x="6" y="6" width="12" height="12" rx="2" />
+                    </svg>
+                    <span class="btn-text">ਪੰਪ ਬੰਦ ਕਰੋ</span>
+                </button>
+            </div>
+
+            <!-- Automation & Safety Toggles -->
+            <div class="feature-toggles-row">
+                <div class="feature-toggle-card">
+                    <div class="feature-toggle-info">
+                        <span class="feature-toggle-name">⚡ ਬਿਜਲੀ ਆਉਣ 'ਤੇ ਆਟੋ-ਸਟਾਰਟ</span>
+                        <!-- <span class="feature-toggle-hint">ਬਿਜਲੀ ਕੱਟ ਤੋਂ ਬਾਅਦ ਆਪਣੇ-ਆਪ ਚਾਲੂ</span> -->
+                    </div>
+                    <button class="toggle-pill" id="btnToggleAutoResume">ਬੰਦ</button>
+                </div>
+                <div class="feature-toggle-card">
+                    <div class="feature-toggle-info">
+                        <span class="feature-toggle-name">🛡️ ਡਰਾਈ-ਰਨ ਆਟੋ ਟ੍ਰਿਪ</span>
+                        <!-- <span class="feature-toggle-hint">ਮੋਟਰ ਬੰਦ ਕਰੋ ਜਾਂ ਸਿਰਫ਼ ਚੇਤਾਵਨੀ</span> -->
+                    </div>
+                    <button class="toggle-pill warning-active" id="btnToggleDryRun">ਸਿਰਫ਼ ਚੇਤਾਵਨੀ</button>
+                </div>
+            </div>
+
+            <!-- Handshake & ACK Status Bar -->
+            <div class="handshake-bar" id="handshakeBar">
+                <span class="handshake-icon" id="handshakeIcon">⚡</span>
+                <span class="handshake-msg" id="handshakeMsg">ਸਿਸਟਮ ਤਿਆਰ ਹੈ।</span>
+            </div>
+        </section>
+
+        <!-- SENSORS & TELEMETRY GRID -->
+        <section class="telemetry-grid">
+
+            <!-- Electricity & Mains Voltage -->
+            <div class="card metric-card">
+                <div class="metric-top">
+                    <span class="metric-label">ਬਿਜਲੀ ਸਪਲਾਈ</span>
+                    <span class="badge" id="mainsBadge">ਜਾਂਚ ਜਾਰੀ ਹੈ</span>
+                </div>
+                <div class="metric-main">
+                    <span class="metric-val" id="voltageVal">--.-</span>
+                    <span class="metric-unit">V AC</span>
+                </div>
+                <div class="meter-bar-track">
+                    <div class="meter-bar-fill" id="voltageFill" style="width: 0%;"></div>
+                </div>
+                <div class="metric-footer">
+                    <span>ਘੱਟੋ-ਘੱਟ ਸੀਮਾ: 120V</span>
+                    <span id="mainsHealthText">ਸਥਿਰ 50Hz</span>
+                </div>
+            </div>
+
+            <!-- Motor Current (CT Sensor) -->
+            <div class="card metric-card">
+                <div class="metric-top">
+                    <span class="metric-label">ਮੋਟਰ ਲੋਡ</span>
+                    <span class="badge" id="currentBadge">ਸਟੈਂਡਬਾਏ</span>
+                </div>
+                <div class="metric-main">
+                    <span class="metric-val" id="currentVal">0.0</span>
+                    <span class="metric-unit">A</span>
+                </div>
+                <div class="meter-bar-track">
+                    <div class="meter-bar-fill fill-current" id="currentFill" style="width: 0%;"></div>
+                </div>
+                <div class="metric-footer">
+                    <span>ਡਰਾਈ-ਰਨ ਸੀਮਾ: &lt;6.0A</span>
+                    <span id="loadStateText">ਮੋਟਰ ਬੰਦ ਹੈ</span>
+                </div>
+            </div>
+
+            <!-- Cellular 4G LTE Network -->
+            <div class="card metric-card">
+                <div class="metric-top">
+                    <span class="metric-label">4G LTE ਸਿਗਨਲ ਲਿੰਕ</span>
+                    <span class="badge badge-blue" id="carrierBadge">A7672S</span>
+                </div>
+                <div class="metric-main">
+                    <span class="metric-val" id="signalVal">--</span>
+                    <span class="metric-unit">/ 31 CSQ</span>
+                </div>
+                <div class="signal-bars" id="signalBars">
+                    <span class="bar bar-1"></span>
+                    <span class="bar bar-2"></span>
+                    <span class="bar bar-3"></span>
+                    <span class="bar bar-4"></span>
+                </div>
+                <div class="metric-footer">
+                    <span id="networkModeText">Cat-1 LTE</span>
+                    <span id="apnText">airtelgprs.com</span>
+                </div>
+            </div>
+
+            <!-- Safety & Controller Health -->
+            <div class="card metric-card">
+                <div class="metric-top">
+                    <span class="metric-label">ਸੁਰੱਖਿਆ ਪ੍ਰਣਾਲੀ</span>
+                    <span class="badge badge-green" id="protectionBadge">ਸਰਗਰਮ</span>
+                </div>
+                <div class="metric-health-list">
+                    <div class="health-item">
+                        <span>ਡਿਊਲ-ਰਿਲੇਅ ਇੰਟਰਲਾਕ:</span>
+                        <strong class="text-green" id="dualRelayText">ਤਿਆਰ (Armed)</strong>
+                    </div>
+                    <div class="health-item">
+                        <span>ਘੱਟੋ-ਘੱਟ ਸੁਰੱਖਿਅਤ ਵੋਲਟੇਜ:</span>
+                        <strong class="text-green">&ge; 150V ਸੁਰੱਖਿਅਤ</strong>
+                    </div>
+                    <div class="health-item">
+                        <span>ਡਰਾਈ-ਰਨ ਮੋਡ:</span>
+                        <strong class="text-amber" id="dryRunArmText">ਸਿਰਫ਼ ਚੇਤਾਵਨੀ (ਮੋਟਰ ਨਹੀਂ ਰੁਕੇਗੀ)</strong>
+                    </div>
+                    <div class="health-item">
+                        <span>ਬਿਜਲੀ ਕੱਟ ਪਛਾਣ:</span>
+                        <strong class="text-blue" id="mainsDetectText">&lt; 120V</strong>
+                    </div>
+                    <div class="health-item">
+                        <span>ਬਿਜਲੀ ਆਉਣ 'ਤੇ ਆਟੋ-ਸਟਾਰਟ:</span>
+                        <strong class="text-muted" id="autoResumeStatusText">ਬੰਦ</strong>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ACTIVITY & EVENT LOG -->
+        <section class="card log-card">
+            <div class="log-header">
+                <h3>ਲਾਈਵ ਟੈਲੀਮੈਟਰੀ ਸਟ੍ਰੀਮ</h3>
+                <button class="clear-btn" id="btnClearLogs">ਸਾਫ਼ ਕਰੋ</button>
+            </div>
+            <div class="log-container" id="logContainer">
+                <div class="log-entry log-info">
+                    <span class="log-time">--:--:--</span>
+                    <span class="log-msg">ਤਿਆਰ। ਲਾਈਵ ਡਾਟਾ ਦੇਖਣ ਲਈ MQTT ਬ੍ਰੋਕਰ ਨਾਲ ਜੁੜੋ।</span>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- HiveMQ Settings Modal -->
+    <div class="modal-backdrop" id="settingsModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>MQTT ਬ੍ਰੋਕਰ ਸੈਟਿੰਗਾਂ</h3>
+                <button class="modal-close" id="btnCloseSettings">✕</button>
+            </div>
+            <p class="modal-note">
+                ਇੱਥੇ ਆਪਣਾ ਬ੍ਰੋਕਰ WSS ਹੋਸਟ ਦਰਜ ਕਰੋ। ਇਹ ਜਾਣਕਾਰੀ ਤੁਹਾਡੇ ਬ੍ਰਾਊਜ਼ਰ ਦੀ ਲੋਕਲ ਸਟੋਰੇਜ ਵਿੱਚ ਸੁਰੱਖਿਅਤ ਰਹਿੰਦੀ ਹੈ।
+            </p>
+
+            <form id="settingsForm" class="settings-form">
+                <div class="form-group">
+                    <label for="cfgHost">ਬ੍ਰੋਕਰ WSS ਹੋਸਟ</label>
+                    <input type="text" id="cfgHost" value="broker.hivemq.com" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="cfgPort">ਪੋਰਟ (Port)</label>
+                        <input type="number" id="cfgPort" value="8884" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cfgPath">ਪਾਥ (Path)</label>
+                        <input type="text" id="cfgPath" value="/mqtt" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="cfgUser">ਯੂਜ਼ਰਨੇਮ (ਵਿਕਲਪਿਕ)</label>
+                    <input type="text" id="cfgUser" placeholder="ਪਬਲਿਕ ਬ੍ਰੋਕਰ ਲਈ ਖ਼ਾਲੀ ਛੱਡੋ">
+                </div>
+                <div class="form-group">
+                    <label for="cfgPass">ਪਾਸਵਰਡ (ਵਿਕਲਪਿਕ)</label>
+                    <input type="password" id="cfgPass" placeholder="ਪਬਲਿਕ ਬ੍ਰੋਕਰ ਲਈ ਖ਼ਾਲੀ ਛੱਡੋ">
+                </div>
+                <div class="form-group">
+                    <label for="cfgTopicPrefix">ਟੌਪਿਕ ਪ੍ਰੀਫਿਕਸ</label>
+                    <input type="text" id="cfgTopicPrefix" value="farm/pump" required>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="btnCancelSettings">ਰੱਦ ਕਰੋ</button>
+                    <button type="submit" class="btn btn-primary" id="btnSaveConnect">ਸੇਵ ਕਰੋ ਅਤੇ ਕਨੈਕਟ ਕਰੋ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
