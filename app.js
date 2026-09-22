@@ -20,6 +20,8 @@
     let inFlightStartTime = 0;
     let inFlightTimer = null;
     let targetDeviceId = null;
+    let latestVoltage = null;
+    let latestMotorState = "OFF";
     const isPunjabi = (document.documentElement.lang === "pa");
 
     const t = {
@@ -57,6 +59,8 @@
         pumpingNormally: isPunjabi ? "ਪਾਣੀ ਪੰਪ ਹੋ ਰਿਹਾ ਹੈ" : "Pumping normally",
         lowCurrentWarning: isPunjabi ? "ਘੱਟ ਕਰੰਟ ਚੇਤਾਵਨੀ!" : "Low current warning!",
         motorStopped: isPunjabi ? "ਮੋਟਰ ਬੰਦ ਹੈ" : "Motor Stopped",
+        noElectricity: isPunjabi ? "ਬਿਜਲੀ ਉਪਲਬਧ ਨਹੀਂ ਹੈ" : "ELECTRICITY NOT PRESENT",
+        noElectricityAlert: isPunjabi ? "ਬਿਜਲੀ ਸਪਲਾਈ ਉਪਲਬਧ ਨਹੀਂ ਹੈ (ਵੋਲਟੇਜ 120V ਤੋਂ ਘੱਟ ਹੈ)। ਮੋਟਰ ਚਾਲੂ ਨਹੀਂ ਹੋ ਸਕਦੀ।" : "Electricity is not present (Voltage is below 120V). Motor cannot be started.",
         standbySubtitle: isPunjabi ? "ਸਟਾਰਟਰ ਸਟੈਂਡਬਾਏ 'ਤੇ ਹੈ" : "Starter standby",
         runningSubtitle: (v, i) => isPunjabi ? `${v}V (${i}A) 'ਤੇ ਚੱਲ ਰਹੀ ਹੈ` : `Running at ${v}V (${i}A)`,
         cmdSent: (a) => isPunjabi ? `ਕਮਾਂਡ [${a}] ਭੇਜੀ ਗਈ। ESP32 ਦੀ ਪੁਸ਼ਟੀ ਦੀ ਉਡੀਕ ਹੈ...` : `Command [${a}] sent. Waiting for ESP32 hardware confirmation...`,
@@ -210,6 +214,10 @@
 
         // Motor Control Buttons
         btnMotorStart.addEventListener("click", () => {
+            if (latestVoltage !== null && latestVoltage < 120.0) {
+                alert(t.noElectricityAlert);
+                return;
+            }
             if (confirm("Turn ON?")) {
                 publishCommand("ON");
             }
@@ -382,6 +390,49 @@
             const span = btnMotorStop.querySelector(".btn-text");
             if (span) span.textContent = isLoading ? t.stopping : t.stopPump;
         }
+
+        if (!isLoading) {
+            updateStartButtonState();
+        }
+    }
+
+    function updateStartButtonState() {
+        if (!btnMotorStart) return;
+
+        // Never overwrite in-flight loading state
+        if (inFlightCmd === "ON") return;
+
+        const span = btnMotorStart.querySelector(".btn-text");
+        const svg = btnMotorStart.querySelector("svg");
+
+        if (latestMotorState === "ON") {
+            btnMotorStart.disabled = true;
+            btnMotorStart.classList.remove("btn-no-power");
+            if (span) span.textContent = t.startPump;
+            if (svg) {
+                svg.innerHTML = '<path d="M8 5v14l11-7z" />';
+            }
+            return;
+        }
+
+        // Calculate electricity strictly by voltage on webapp (>=120V)
+        const hasElectricity = (latestVoltage !== null) ? (latestVoltage >= 120.0) : true;
+
+        if (!hasElectricity) {
+            btnMotorStart.classList.add("btn-no-power");
+            if (span) span.textContent = t.noElectricity;
+            if (svg) {
+                // Caution / No power circle exclamation icon
+                svg.innerHTML = '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />';
+            }
+        } else {
+            btnMotorStart.classList.remove("btn-no-power");
+            btnMotorStart.disabled = false;
+            if (span) span.textContent = t.startPump;
+            if (svg) {
+                svg.innerHTML = '<path d="M8 5v14l11-7z" />';
+            }
+        }
     }
 
     // Process incoming MQTT payloads
@@ -457,6 +508,7 @@
 
         // Voltage
         if (typeof data.voltage === "number") {
+            latestVoltage = data.voltage;
             const v = data.voltage;
             voltageVal.textContent = v.toFixed(1);
             const vPct = Math.min(100, Math.max(0, (v / 280) * 100));
@@ -507,6 +559,7 @@
 
         // Motor State
         if (data.motor) {
+            latestMotorState = data.motor;
             stateOrb.classList.remove("running");
             motorStatusTitle.classList.remove("text-running");
 
@@ -520,6 +573,9 @@
                 motorStatusSubtitle.textContent = t.standbySubtitle;
             }
         }
+
+        // Update Start button text & appearance based on calculated voltage
+        updateStartButtonState();
 
         // Auto-Resume Toggle state
         if (data.autoResume !== undefined) {

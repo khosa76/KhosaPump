@@ -426,6 +426,25 @@ body {
     box-shadow: 0 8px 25px var(--color-green-glow);
 }
 
+.btn-start.btn-no-power {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.16) 0%, rgba(185, 28, 28, 0.28) 100%) !important;
+    border: 1px solid rgba(239, 68, 68, 0.45) !important;
+    color: #fca5a5 !important;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.15) !important;
+    cursor: not-allowed;
+    font-size: 0.86rem;
+    letter-spacing: 0.2px;
+}
+
+.btn-start.btn-no-power:hover {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.24) 0%, rgba(185, 28, 28, 0.38) 100%) !important;
+    border-color: rgba(239, 68, 68, 0.6) !important;
+}
+
+.btn-start.btn-no-power svg {
+    color: #ef4444 !important;
+}
+
 .btn-stop {
     background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
     color: #fff;
