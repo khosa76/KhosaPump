@@ -521,6 +521,18 @@ body {
     border: 1px solid rgba(59, 130, 246, 0.3);
 }
 
+.badge-amber {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badge-cyan {
+    background: rgba(6, 182, 212, 0.15);
+    color: #22d3ee;
+    border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
 .metric-main {
     display: flex;
     align-items: baseline;
@@ -561,6 +573,23 @@ body {
 .meter-bar-fill.fill-current {
     background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%);
     box-shadow: 0 0 10px var(--color-blue-glow);
+}
+
+.meter-bar-fill.fill-battery {
+    background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+    box-shadow: 0 0 10px var(--color-green-glow);
+}
+
+.meter-bar-fill.fill-battery-charging {
+    background: linear-gradient(90deg, #06b6d4 0%, #10b981 50%, #3b82f6 100%);
+    background-size: 200% 100%;
+    animation: chargingFlow 2s linear infinite;
+    box-shadow: 0 0 12px rgba(6, 182, 212, 0.5);
+}
+
+@keyframes chargingFlow {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
 }
 
 .metric-footer {

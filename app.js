@@ -2,13 +2,13 @@
 // Connects to HiveMQ via Secure WebSockets (WSS)
 
 (function () {
-    // Config defaults (Points to HiveMQ public broker matching ESP32 firmware)
+    // Config defaults (Points to HiveMQ Cloud Private broker matching ESP32 firmware)
     const DEFAULT_CONFIG = {
-        host: "broker.hivemq.com",
+        host: "db30bf80863f47f78f9a468a8ebfd04e.s1.eu.hivemq.cloud",
         port: 8884,
         path: "/mqtt",
-        user: "",
-        pass: "",
+        user: "KHOSA",
+        pass: "Khosa@123",
         topicPrefix: "farm/pump"
     };
 
@@ -20,7 +20,7 @@
     let inFlightStartTime = 0;
     let inFlightTimer = null;
     let handshakeClearTimer = null;
-    let targetDeviceId = null;
+    let targetDeviceId = localStorage.getItem("agripump_target_device_id") || null;
     let latestVoltage = null;
     let latestMotorState = "OFF";
     const isPunjabi = document.documentElement.lang === "pa" || !window.location.pathname.toLowerCase().includes("english.html");
@@ -65,7 +65,13 @@
         standbySubtitle: isPunjabi ? "ਸਟਾਰਟਰ ਸਟੈਂਡਬਾਏ 'ਤੇ ਹੈ" : "Starter standby",
         runningSubtitle: (v, i) => isPunjabi ? `${v}V (${i}A) 'ਤੇ ਚੱਲ ਰਹੀ ਹੈ` : `Running at ${v}V (${i}A)`,
         cmdSent: (a) => isPunjabi ? `ਕਮਾਂਡ [${a}] ਭੇਜੀ ਗਈ। ESP32 ਦੀ ਪੁਸ਼ਟੀ ਦੀ ਉਡੀਕ ਹੈ...` : `Command [${a}] sent. Waiting for ESP32 hardware confirmation...`,
-        noAck: (c) => isPunjabi ? `10 ਸਕਿੰਟਾਂ ਵਿੱਚ [${c}] ਦੀ ਕੋਈ ਪੁਸ਼ਟੀ ਨਹੀਂ ਮਿਲੀ। 4G ਸਿਗਨਲ ਚੈੱਕ ਕਰੋ।` : `No ACK from ESP32 for [${c}] within 10s. Device may be off or 4G data weak.`
+        noAck: (c) => isPunjabi ? `10 ਸਕਿੰਟਾਂ ਵਿੱਚ [${c}] ਦੀ ਕੋਈ ਪੁਸ਼ਟੀ ਨਹੀਂ ਮਿਲੀ। 4G ਸਿਗਨਲ ਚੈੱਕ ਕਰੋ।` : `No ACK from ESP32 for [${c}] within 10s. Device may be off or 4G data weak.`,
+        charging: isPunjabi ? "ਚਾਰਜ ਹੋ ਰਹੀ ਹੈ ⚡" : "CHARGING ⚡",
+        onBattery: isPunjabi ? "ਬੈਟਰੀ 'ਤੇ 🔋" : "ON BATTERY 🔋",
+        lowBattery: isPunjabi ? "ਬੈਟਰੀ ਘੱਟ ਹੈ ⚠️" : "LOW BATTERY ⚠️",
+        criticalBattery: isPunjabi ? "ਨਾਜ਼ੁਕ ਬੈਟਰੀ 🛑" : "CRITICAL 🛑",
+        chargingText: isPunjabi ? "ਮੁੱਖ ਬਿਜਲੀ ਤੋਂ ਚਾਰਜਿੰਗ ਜਾਰੀ" : "Charging from Mains AC",
+        batteryDischargingText: (ma) => isPunjabi ? `ਖਪਤ: ${ma} mA` : `Discharge: ${ma} mA`
     };
 
     // DOM Elements
@@ -123,6 +129,15 @@
     const networkModeText = document.getElementById("networkModeText");
     const apnText = document.getElementById("apnText");
 
+    // Battery Telemetry Elements (INA219)
+    const batteryCard = document.getElementById("batteryCard");
+    const batteryVal = document.getElementById("batteryVal");
+    const batteryUnit = document.getElementById("batteryUnit");
+    const batteryFill = document.getElementById("batteryFill");
+    const batteryBadge = document.getElementById("batteryBadge");
+    const batteryVoltText = document.getElementById("batteryVoltText");
+    const batteryStateText = document.getElementById("batteryStateText");
+
     // Alerts Banner
     const alertBanner = document.getElementById("alertBanner");
     const alertTitle = document.getElementById("alertTitle");
@@ -177,8 +192,8 @@
             const saved = localStorage.getItem("agripump_mqtt_cfg");
             if (saved) {
                 const parsed = JSON.parse(saved);
-                // If saved host was the old private cluster that didn't match ESP32, reset to default
-                if (parsed.host && parsed.host.includes("hivemq.cloud")) {
+                // If saved host was the old public broker, reset to default HiveMQ Cloud broker
+                if (parsed.host && parsed.host === "broker.hivemq.com") {
                     localStorage.removeItem("agripump_mqtt_cfg");
                     return Object.assign({}, DEFAULT_CONFIG);
                 }
@@ -396,11 +411,15 @@
         }, isBackgroundQuery ? 3000 : 18000);
 
         const cmdTopic = targetDeviceId ? `${config.topicPrefix}/${targetDeviceId}/command` : `${config.topicPrefix}/command`;
-        const payload = JSON.stringify(Object.assign({
+        const payloadObj = Object.assign({
             action: action,
             sender: "web_dashboard",
             timestamp: new Date().toISOString()
-        }, extraData));
+        }, extraData);
+        if (targetDeviceId) {
+            payloadObj.targetDeviceId = targetDeviceId;
+        }
+        const payload = JSON.stringify(payloadObj);
 
         client.publish(cmdTopic, payload, { qos: 1 }, (err) => {
             if (err) {
@@ -502,9 +521,12 @@
         try {
             const data = JSON.parse(payloadStr);
 
-            if (data.deviceId && !targetDeviceId) {
-                targetDeviceId = data.deviceId;
-                appendLog("info", `🎯 Auto-targeted active pump device: [${targetDeviceId}]`);
+            if (data.deviceId) {
+                if (targetDeviceId !== data.deviceId) {
+                    targetDeviceId = data.deviceId;
+                    localStorage.setItem("agripump_target_device_id", targetDeviceId);
+                    appendLog("info", `🎯 Auto-targeted active pump device: [${targetDeviceId}]`);
+                }
             }
 
             if (topic.endsWith("/ack")) {
@@ -523,7 +545,7 @@
                     updateBrokerStatus("error", "ESP32 Offline");
                     appendLog("alert", "🔴 ESP32 went OFFLINE (LWT connection lost).");
                 }
-            } else if (topic.endsWith("/alert")) {
+            } else if (topic.endsWith("/alert") || topic.endsWith("/alerts")) {
                 showAlertBanner(data.title || "EMERGENCY ALERT", data.message || payloadStr);
                 appendLog("alert", `🚨 ${data.title || "ALERT"}: ${data.message || payloadStr}`);
             }
@@ -537,6 +559,12 @@
         if (inFlightTimer) {
             clearTimeout(inFlightTimer);
             inFlightTimer = null;
+        }
+
+        if (data.deviceId && targetDeviceId !== data.deviceId) {
+            targetDeviceId = data.deviceId;
+            localStorage.setItem("agripump_target_device_id", targetDeviceId);
+            appendLog("info", `🎯 Auto-targeted active pump device: [${targetDeviceId}]`);
         }
 
         const cmd = (data.command || data.cmd || inFlightCmd || "").toUpperCase();
@@ -750,6 +778,65 @@
         const apn = data.apn || (carrier ? (carrier.toLowerCase().includes("airtel") ? "airtelgprs.com" : (carrier.toLowerCase().includes("jio") ? "jionet" : "auto-apn")) : null);
         if (apn) {
             apnText.textContent = apn;
+        }
+
+        // Battery Backup & INA219 Metrics
+        if (typeof data.vbat === "number" || typeof data.battPct === "number") {
+            const vbat = (typeof data.vbat === "number") ? data.vbat : 0;
+            const ibat = (typeof data.ibat === "number") ? data.ibat : 0;
+            const pct = (typeof data.battPct === "number") ? Math.min(100, Math.max(0, data.battPct)) : 0;
+            const isCharging = (data.charging === true) || (data.mains === "YES" && vbat > 0);
+
+            if (batteryVoltText) {
+                batteryVoltText.textContent = `${vbat.toFixed(2)} V`;
+            }
+
+            if (isCharging) {
+                if (batteryVal) batteryVal.textContent = "⚡";
+                if (batteryUnit) batteryUnit.textContent = `${pct}%`;
+                if (batteryBadge) {
+                    batteryBadge.textContent = t.charging;
+                    batteryBadge.className = "badge badge-cyan";
+                }
+                if (batteryFill) {
+                    batteryFill.style.width = "100%";
+                    batteryFill.className = "meter-bar-fill fill-battery-charging";
+                }
+                if (batteryStateText) {
+                    batteryStateText.textContent = `${t.chargingText} (${ibat >= 0 ? "+" : ""}${ibat.toFixed(0)} mA)`;
+                }
+            } else {
+                if (batteryVal) batteryVal.textContent = pct;
+                if (batteryUnit) batteryUnit.textContent = "%";
+                if (batteryFill) {
+                    batteryFill.className = "meter-bar-fill fill-battery";
+                    batteryFill.style.width = `${pct}%`;
+                    if (pct > 50) {
+                        batteryFill.style.background = "linear-gradient(90deg, #10b981 0%, #34d399 100%)";
+                    } else if (pct > 20) {
+                        batteryFill.style.background = "linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%)";
+                    } else {
+                        batteryFill.style.background = "linear-gradient(90deg, #ef4444 0%, #f87171 100%)";
+                    }
+                }
+
+                if (batteryBadge) {
+                    if (pct <= 10 || vbat <= 6.1) {
+                        batteryBadge.textContent = t.criticalBattery;
+                        batteryBadge.className = "badge badge-red";
+                    } else if (pct <= 25 || vbat <= 6.5) {
+                        batteryBadge.textContent = t.lowBattery;
+                        batteryBadge.className = "badge badge-amber";
+                    } else {
+                        batteryBadge.textContent = t.onBattery;
+                        batteryBadge.className = "badge badge-green";
+                    }
+                }
+
+                if (batteryStateText) {
+                    batteryStateText.textContent = t.batteryDischargingText(Math.abs(ibat).toFixed(0));
+                }
+            }
         }
     }
 
