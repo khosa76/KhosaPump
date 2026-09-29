@@ -784,8 +784,8 @@
         if (typeof data.vbat === "number" || typeof data.battPct === "number") {
             const vbat = (typeof data.vbat === "number") ? data.vbat : 0;
             const ibat = (typeof data.ibat === "number") ? data.ibat : 0;
-            const pct = (typeof data.battPct === "number") ? Math.min(100, Math.max(0, data.battPct)) : 0;
-            const isCharging = (data.charging === true) || (data.mains === "YES" && vbat > 0);
+            const isMainsOn = (data.mains === "YES" || (typeof data.voltage === "number" && data.voltage >= 120));
+            const isCharging = isMainsOn && (data.charging === true || (vbat > 0 && vbat < 8.35));
 
             if (batteryVoltText) {
                 batteryVoltText.textContent = `${vbat.toFixed(2)} V`;
