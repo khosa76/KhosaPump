@@ -152,6 +152,34 @@
             </div>
         </section>
 
+        <!-- MOTOR 2 LORA REMOTE CONTROL CARD -->
+        <section class="card" style="margin-bottom: 20px; border-left: 4px solid #8b5cf6;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div>
+                    <h3 style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                        <span>📡</span>
+                        <span>ਰਿਮੋਟ ਮੋਟਰ 2 (LoRa ਵਾਇਰਲੈੱਸ)</span>
+                    </h3>
+                    <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: #94a3b8;">ਦੂਰ ਵਾਲੀ ਬੋਰਵੇਲ / ਬੂਸਟਰ ਮੋਟਰ LoRa ਰੇਡੀਓ ਰਾਹੀਂ ਕੰਟਰੋਲ</p>
+                </div>
+                <span class="badge badge-gray" id="motor2Badge">ਸਟੈਂਡਬਾਏ</span>
+            </div>
+            <div class="control-actions" style="margin-bottom: 0;">
+                <button class="btn btn-start" id="btnMotor2Start" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 5v14l11-7z" />
+                    </svg>
+                    <span class="btn-text">ਮੋਟਰ 2 ਚਲਾਓ</span>
+                </button>
+                <button class="btn btn-stop" id="btnMotor2Stop">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <rect x="6" y="6" width="12" height="12" rx="2" />
+                    </svg>
+                    <span class="btn-text">ਮੋਟਰ 2 ਬੰਦ ਕਰੋ</span>
+                </button>
+            </div>
+        </section>
+
         <!-- SENSORS & TELEMETRY GRID -->
         <section class="telemetry-grid">
 
@@ -319,6 +347,17 @@
                 <div class="form-group">
                     <label for="cfgTopicPrefix">ਟੌਪਿਕ ਪ੍ਰੀਫਿਕਸ</label>
                     <input type="text" id="cfgTopicPrefix" value="farm/pump" required>
+                </div>
+
+                <!-- 4G Cellular OTA Firmware Update -->
+                <div class="form-group" style="border-top: 1px solid #334155; padding-top: 15px; margin-top: 15px;">
+                    <label style="color: #38bdf8; font-weight: 600;">🚀 4G OTA ਫਰਮਵੇਅਰ ਅੱਪਡੇਟ</label>
+                    <p style="font-size: 0.75rem; color: #94a3b8; margin: 4px 0 10px 0;">ESP32 ਨੂੰ 4G LTE ਰਾਹੀਂ ਰਿਮੋਟਲੀ ਫਲੈਸ਼ ਕਰਨ ਲਈ ਕੰਪਾਇਲ ਕੀਤੇ .bin ਦਾ ਲਿੰਕ ਦਰਜ ਕਰੋ</p>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="cfgOtaUrl" placeholder="https://your-server.com/firmware.bin" style="flex: 1;">
+                        <button type="button" class="btn btn-primary" id="btnTriggerOta" style="padding: 0 15px; white-space: nowrap; font-size: 0.8rem; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">ਅੱਪਡੇਟ ਸ਼ੁਰੂ ਕਰੋ</button>
+                    </div>
+                    <span id="otaStatusText" style="font-size: 0.75rem; color: #38bdf8; display: block; margin-top: 6px;"></span>
                 </div>
 
                 <div class="modal-actions">

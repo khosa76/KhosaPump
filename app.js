@@ -102,6 +102,12 @@
     const btnMotorStart = document.getElementById("btnMotorStart");
     const btnMotorStop = document.getElementById("btnMotorStop");
 
+    // Motor 2 (LoRa) Controls
+    const btnMotor2Start = document.getElementById("btnMotor2Start");
+    const btnMotor2Stop = document.getElementById("btnMotor2Stop");
+    const motor2Badge = document.getElementById("motor2Badge");
+    let latestMotor2State = "OFF";
+
     // Handshake & Status Bars
     const handshakeBar = document.getElementById("handshakeBar");
     const handshakeIcon = document.getElementById("handshakeIcon");
@@ -161,6 +167,11 @@
     const cfgUser = document.getElementById("cfgUser");
     const cfgPass = document.getElementById("cfgPass");
     const cfgTopicPrefix = document.getElementById("cfgTopicPrefix");
+
+    // 4G OTA Elements
+    const cfgOtaUrl = document.getElementById("cfgOtaUrl");
+    const btnTriggerOta = document.getElementById("btnTriggerOta");
+    const otaStatusText = document.getElementById("otaStatusText");
 
     // Initialize
     function init() {
@@ -255,22 +266,61 @@
             logContainer.innerHTML = "";
         });
 
-        // Motor Control Buttons
+        // Motor 1 Control Buttons
         btnMotorStart.addEventListener("click", () => {
             if (latestVoltage !== null && latestVoltage < 120.0) {
                 alert(t.noElectricityAlert);
                 return;
             }
-            if (confirm("Turn ON?")) {
+            if (confirm(isPunjabi ? "ਮੋਟਰ 1 ਚਾਲੂ ਕਰਨੀ ਹੈ?" : "Turn ON Motor 1?")) {
                 publishCommand("ON");
             }
         });
 
         btnMotorStop.addEventListener("click", () => {
-            if (confirm("Turn OFF?")) {
+            if (confirm(isPunjabi ? "ਮੋਟਰ 1 ਬੰਦ ਕਰਨੀ ਹੈ?" : "Turn OFF Motor 1?")) {
                 publishCommand("OFF");
             }
         });
+
+        // Motor 2 Controls (LoRa Wireless)
+        if (btnMotor2Start) {
+            btnMotor2Start.addEventListener("click", () => {
+                if (latestVoltage !== null && latestVoltage < 120.0) {
+                    alert(t.noElectricityAlert);
+                    return;
+                }
+                if (confirm(isPunjabi ? "ਕੀ ਤੁਸੀਂ ਰਿਮੋਟ ਮੋਟਰ 2 (LoRa) ਚਾਲੂ ਕਰਨੀ ਚਾਹੁੰਦੇ ਹੋ?" : "Start Remote Motor 2 via LoRa?")) {
+                    publishCommand("M2_ON");
+                }
+            });
+        }
+
+        if (btnMotor2Stop) {
+            btnMotor2Stop.addEventListener("click", () => {
+                if (confirm(isPunjabi ? "ਕੀ ਤੁਸੀਂ ਰਿਮੋਟ ਮੋਟਰ 2 (LoRa) ਬੰਦ ਕਰਨੀ ਚਾਹੁੰਦੇ ਹੋ?" : "Stop Remote Motor 2 via LoRa?")) {
+                    publishCommand("M2_OFF");
+                }
+            });
+        }
+
+        // 4G Cellular OTA Trigger
+        if (btnTriggerOta) {
+            btnTriggerOta.addEventListener("click", () => {
+                const otaUrl = cfgOtaUrl ? cfgOtaUrl.value.trim() : "";
+                if (!otaUrl || !otaUrl.toLowerCase().startsWith("http")) {
+                    alert(isPunjabi ? "ਕਿਰਪਾ ਕਰਕੇ ਸਹੀ HTTP/HTTPS ਫਰਮਵੇਅਰ ਲਿੰਕ ਭਰੋ (.bin)" : "Please enter a valid HTTP/HTTPS firmware binary (.bin) URL.");
+                    return;
+                }
+                if (confirm(isPunjabi ? `ਕੀ ਤੁਸੀਂ 4G OTA ਰਾਹੀਂ ESP32 ਨੂੰ ਫਲੈਸ਼ ਕਰਨਾ ਚਾਹੁੰਦੇ ਹੋ?\nਲਿੰਕ: ${otaUrl}` : `Flash ESP32 over 4G Cellular OTA now?\nURL: ${otaUrl}`)) {
+                    if (otaStatusText) {
+                        otaStatusText.textContent = isPunjabi ? "OTA ਕਮਾਂਡ ਭੇਜੀ ਜਾ ਰਹੀ ਹੈ..." : "Sending OTA trigger command...";
+                        otaStatusText.style.color = "#38bdf8";
+                    }
+                    publishCommand("OTA", { url: otaUrl });
+                }
+            });
+        }
 
         if (btnToggleAutoResume) {
             btnToggleAutoResume.addEventListener("click", () => {
@@ -433,7 +483,7 @@
     }
 
     function setButtonsLoading(action, isLoading) {
-        const btns = [btnMotorStart, btnMotorStop];
+        const btns = [btnMotorStart, btnMotorStop, btnMotor2Start, btnMotor2Stop];
         btns.forEach(b => {
             if (b) b.disabled = isLoading;
         });
@@ -444,6 +494,12 @@
         } else if (action === "OFF" && btnMotorStop) {
             const span = btnMotorStop.querySelector(".btn-text");
             if (span) span.textContent = isLoading ? t.stopping : t.stopPump;
+        } else if (action === "M2_ON" && btnMotor2Start) {
+            const span = btnMotor2Start.querySelector(".btn-text");
+            if (span) span.textContent = isLoading ? (isPunjabi ? "ਚਾਲੂ ਹੋ ਰਿਹਾ ਹੈ..." : "STARTING...") : (isPunjabi ? "ਮੋਟਰ 2 ਚਾਲੂ ਕਰੋ" : "START MOTOR 2");
+        } else if (action === "M2_OFF" && btnMotor2Stop) {
+            const span = btnMotor2Stop.querySelector(".btn-text");
+            if (span) span.textContent = isLoading ? (isPunjabi ? "ਬੰਦ ਹੋ ਰਿਹਾ ਹੈ..." : "STOPPING...") : (isPunjabi ? "ਮੋਟਰ 2 ਬੰਦ ਕਰੋ" : "STOP MOTOR 2");
         }
 
         if (!isLoading) {
@@ -452,40 +508,51 @@
     }
 
     function updateStartButtonState() {
-        if (!btnMotorStart) return;
-
-        // Never overwrite in-flight loading state
-        if (inFlightCmd === "ON") return;
-
-        const span = btnMotorStart.querySelector(".btn-text");
-        const svg = btnMotorStart.querySelector("svg");
-
-        if (latestMotorState === "ON") {
-            btnMotorStart.disabled = true;
-            btnMotorStart.classList.remove("btn-no-power");
-            if (span) span.textContent = t.startPump;
-            if (svg) {
-                svg.innerHTML = '<path d="M8 5v14l11-7z" />';
-            }
-            return;
-        }
-
-        // Calculate electricity strictly by voltage on webapp (>=120V)
         const hasElectricity = (latestVoltage !== null) ? (latestVoltage >= 120.0) : true;
 
-        if (!hasElectricity) {
-            btnMotorStart.classList.add("btn-no-power");
-            if (span) span.textContent = t.noElectricity;
-            if (svg) {
-                // Caution / No power circle exclamation icon
-                svg.innerHTML = '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />';
+        if (btnMotorStart && inFlightCmd !== "ON") {
+            const span = btnMotorStart.querySelector(".btn-text");
+            const svg = btnMotorStart.querySelector("svg");
+
+            if (latestMotorState === "ON") {
+                btnMotorStart.disabled = true;
+                btnMotorStart.classList.remove("btn-no-power");
+                if (span) span.textContent = t.startPump;
+                if (svg) {
+                    svg.innerHTML = '<path d="M8 5v14l11-7z" />';
+                }
+            } else if (!hasElectricity) {
+                btnMotorStart.classList.add("btn-no-power");
+                btnMotorStart.disabled = true;
+                if (span) span.textContent = t.noElectricity;
+                if (svg) {
+                    // Caution / No power circle exclamation icon
+                    svg.innerHTML = '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />';
+                }
+            } else {
+                btnMotorStart.classList.remove("btn-no-power");
+                btnMotorStart.disabled = false;
+                if (span) span.textContent = t.startPump;
+                if (svg) {
+                    svg.innerHTML = '<path d="M8 5v14l11-7z" />';
+                }
             }
-        } else {
-            btnMotorStart.classList.remove("btn-no-power");
-            btnMotorStart.disabled = false;
-            if (span) span.textContent = t.startPump;
-            if (svg) {
-                svg.innerHTML = '<path d="M8 5v14l11-7z" />';
+        }
+
+        if (btnMotor2Start && inFlightCmd !== "M2_ON") {
+            const span = btnMotor2Start.querySelector(".btn-text");
+            if (latestMotor2State === "ON" || latestMotor2State === "RUNNING") {
+                btnMotor2Start.disabled = true;
+                btnMotor2Start.classList.remove("btn-no-power");
+                if (span) span.textContent = isPunjabi ? "ਮੋਟਰ 2 ਚਾਲੂ ਕਰੋ" : "START MOTOR 2";
+            } else if (!hasElectricity) {
+                btnMotor2Start.classList.add("btn-no-power");
+                btnMotor2Start.disabled = true;
+                if (span) span.textContent = t.noElectricity;
+            } else {
+                btnMotor2Start.classList.remove("btn-no-power");
+                btnMotor2Start.disabled = false;
+                if (span) span.textContent = isPunjabi ? "ਮੋਟਰ 2 ਚਾਲੂ ਕਰੋ" : "START MOTOR 2";
             }
         }
     }
@@ -582,10 +649,19 @@
             if (handshakeClearTimer) clearTimeout(handshakeClearTimer);
             handshakeBar.style.display = "flex";
 
-            if (status === "SUCCESS") {
+            if (status === "SUCCESS" || status === "SENT" || status === "STARTING") {
                 if (cmd === "ON") latestMotorState = "ON";
                 else if (cmd === "OFF") latestMotorState = "OFF";
+                else if (cmd === "M2_ON") latestMotor2State = "ON";
+                else if (cmd === "M2_OFF") latestMotor2State = "OFF";
+
+                if (cmd === "OTA" && otaStatusText) {
+                    otaStatusText.textContent = `🚀 [${timeStr}]: ${msg || "OTA initiated..."}`;
+                    otaStatusText.style.color = "#10b981";
+                }
+
                 updateCardsVisibility();
+                updateStartButtonState();
                 handshakeBar.className = "handshake-bar success";
                 handshakeIcon.textContent = "✓";
                 handshakeMsg.textContent = `[ACK in ${timeStr}]: ${msg || "Command Executed"}`;
@@ -598,12 +674,20 @@
                     }
                 }, 5000);
             } else if (status === "REJECTED") {
+                if (cmd === "OTA" && otaStatusText) {
+                    otaStatusText.textContent = `❌ ${msg || "OTA Rejected"}`;
+                    otaStatusText.style.color = "#ef4444";
+                }
                 handshakeBar.className = "handshake-bar rejected";
                 handshakeIcon.textContent = "❌";
                 handshakeMsg.textContent = `[REJECTED]: ${msg || "Command rejected by controller"}`;
                 appendLog("alert", `❌ [ESP32 Rejected]: ${msg}`);
                 showAlertBanner("COMMAND REJECTED", msg);
             } else {
+                if (cmd === "OTA" && otaStatusText) {
+                    otaStatusText.textContent = `⚠️ ${msg || "Execution error"}`;
+                    otaStatusText.style.color = "#f59e0b";
+                }
                 handshakeBar.className = "handshake-bar rejected";
                 handshakeIcon.textContent = "⚠️";
                 handshakeMsg.textContent = `[FAILED]: ${msg || "Execution error"}`;
@@ -784,6 +868,7 @@
         if (typeof data.vbat === "number" || typeof data.battPct === "number") {
             const vbat = (typeof data.vbat === "number") ? data.vbat : 0;
             const ibat = (typeof data.ibat === "number") ? data.ibat : 0;
+            const pct = (typeof data.battPct === "number") ? Math.round(data.battPct) : Math.round(Math.min(100, Math.max(0, (((typeof data.vbat === "number" ? data.vbat : 7.4) - 6.0) / 2.4) * 100)));
             const isMainsOn = (data.mains === "YES" || (typeof data.voltage === "number" && data.voltage >= 120));
             const isCharging = isMainsOn && (data.charging === true || (vbat > 0 && vbat < 8.35));
 
@@ -837,6 +922,39 @@
                     batteryStateText.textContent = t.batteryDischargingText(Math.abs(ibat).toFixed(0));
                 }
             }
+        }
+
+        // Motor 2 (LoRa Wireless) Status
+        if (data.m2 !== undefined || data.m2Status !== undefined) {
+            const m2 = data.m2 || data.m2Status || "OFF";
+            latestMotor2State = m2;
+            const isReachable = (data.m2Reachable !== false);
+
+            if (motor2Badge) {
+                if (!isReachable) {
+                    motor2Badge.textContent = isPunjabi ? "ਸੰਪਰਕ ਟੁੱਟਿਆ" : "UNREACHABLE";
+                    motor2Badge.className = "badge badge-red";
+                } else if (m2 === "ON" || m2 === "RUNNING") {
+                    motor2Badge.textContent = isPunjabi ? "ਮੋਟਰ 2 ਚਾਲੂ ਹੈ" : "RUNNING";
+                    motor2Badge.className = "badge badge-green";
+                } else {
+                    motor2Badge.textContent = isPunjabi ? "ਸਟੈਂਡਬਾਏ" : "STANDBY";
+                    motor2Badge.className = "badge badge-gray";
+                }
+            }
+
+            // Check if live telemetry confirms an in-flight M2 command
+            if (inFlightCmd === "M2_ON" && (m2 === "ON" || m2 === "RUNNING")) {
+                if (inFlightTimer) { clearTimeout(inFlightTimer); inFlightTimer = null; }
+                setButtonsLoading("M2_ON", false);
+                inFlightCmd = null;
+            } else if (inFlightCmd === "M2_OFF" && (m2 === "OFF" || m2 === "STANDBY")) {
+                if (inFlightTimer) { clearTimeout(inFlightTimer); inFlightTimer = null; }
+                setButtonsLoading("M2_OFF", false);
+                inFlightCmd = null;
+            }
+
+            updateStartButtonState();
         }
     }
 
